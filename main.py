@@ -6,8 +6,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
 
+
 # =========================
-# 🌐 KEEP ALIVE (RENDER)
+# 🌐 KEEP ALIVE (Render)
 # =========================
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -33,7 +34,6 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # 🔥 GUILD SYNC (INSTANTÁNEO)
         guild = discord.Object(id=config.GUILD_ID)
 
         self.tree.copy_global_to(guild=guild)
@@ -62,10 +62,7 @@ async def suggest(interaction: discord.Interaction, idea: str):
     channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
 
     if not channel:
-        return await interaction.response.send_message(
-            "❌ Canal no encontrado",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ Canal no encontrado", ephemeral=True)
 
     embed = discord.Embed(
         title="💡 Nueva sugerencia",
@@ -79,10 +76,14 @@ async def suggest(interaction: discord.Interaction, idea: str):
     await msg.add_reaction("👍")
     await msg.add_reaction("👎")
 
-    await interaction.response.send_message(
-        "✅ Sugerencia enviada",
-        ephemeral=True
-    )
+    await interaction.response.send_message("✅ Sugerencia enviada", ephemeral=True)
+
+
+# =========================
+# 🔧 CHECK DE ROL STAFF
+# =========================
+def is_staff(interaction: discord.Interaction) -> bool:
+    return any(role.id == config.STAFF_ROLE_ID for role in interaction.user.roles)
 
 
 # =========================
@@ -122,10 +123,16 @@ async def move_suggestion(interaction, message_id: int, channel_id: int, title: 
 
 
 # =========================
-# ACCEPT
+# ✅ ACCEPT (SOLO STAFF ROL)
 # =========================
 @client.tree.command(name="accept", description="Aceptar sugerencia")
 async def accept(interaction: discord.Interaction, message_id: str):
+
+    if not is_staff(interaction):
+        return await interaction.response.send_message(
+            "❌ No tienes permisos (staff requerido)",
+            ephemeral=True
+        )
 
     await move_suggestion(
         interaction,
@@ -137,10 +144,16 @@ async def accept(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# DENY
+# ❌ DENY (SOLO STAFF ROL)
 # =========================
 @client.tree.command(name="deny", description="Rechazar sugerencia")
 async def deny(interaction: discord.Interaction, message_id: str):
+
+    if not is_staff(interaction):
+        return await interaction.response.send_message(
+            "❌ No tienes permisos (staff requerido)",
+            ephemeral=True
+        )
 
     await move_suggestion(
         interaction,
