@@ -23,7 +23,7 @@ def run_web():
 Thread(target=run_web, daemon=True).start()
 
 # =========================
-# 🤖 BOT
+# 🤖 BOT SETUP
 # =========================
 intents = discord.Intents.default()
 
@@ -31,12 +31,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 # =========================
-# READY (SYNC SLASH COMMANDS)
+# READY (IMPORTANTE)
 # =========================
 @bot.event
 async def on_ready():
     print("🔥 ON READY EJECUTADO")
 
+    # 🔥 Sync de slash commands
     try:
         synced = await bot.tree.sync()
         print(f"✅ Slash commands sincronizados: {len(synced)}")
