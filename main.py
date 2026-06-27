@@ -23,28 +23,32 @@ def run_web():
 Thread(target=run_web, daemon=True).start()
 
 # =========================
-# 🤖 BOT SETUP
+# INTENTS
 # =========================
 intents = discord.Intents.default()
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+# =========================
+# BOT (PRO SETUP)
+# =========================
+class MyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="!", intents=intents)
+
+    async def setup_hook(self):
+        # 🔥 Sync de slash commands aquí (NO en on_ready)
+        synced = await self.tree.sync()
+        print(f"✅ Slash commands sincronizados: {len(synced)}")
+
+
+bot = MyBot()
 
 
 # =========================
-# READY (IMPORTANTE)
+# READY
 # =========================
 @bot.event
 async def on_ready():
-    print("🔥 ON READY EJECUTADO")
-
-    # 🔥 Sync de slash commands
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ Slash commands sincronizados: {len(synced)}")
-    except Exception as e:
-        print(f"❌ ERROR SYNC: {e}")
-
-    print(f"🤖 Conectado como {bot.user}")
+    print(f"🔥 Bot conectado como {bot.user}")
 
 
 # =========================
@@ -80,7 +84,7 @@ async def suggest(interaction: discord.Interaction, idea: str):
 
 
 # =========================
-# ✅ ACEPTAR
+# ACEPTAR
 # =========================
 @bot.tree.command(name="accept", description="Aceptar sugerencia")
 @discord.app_commands.default_permissions(manage_messages=True)
@@ -96,7 +100,7 @@ async def accept(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# ❌ RECHAZAR
+# RECHAZAR
 # =========================
 @bot.tree.command(name="deny", description="Rechazar sugerencia")
 @discord.app_commands.default_permissions(manage_messages=True)
@@ -112,7 +116,7 @@ async def deny(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# 🔧 FUNCIÓN INTERNA
+# FUNCIÓN INTERNA
 # =========================
 async def move_suggestion(interaction, message_id, channel_id, title, color):
 
