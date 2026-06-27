@@ -1,6 +1,5 @@
 import os
 import discord
-import asyncio
 from discord.ext import commands
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -8,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import config
 
 # =========================
-# 🌐 KEEP ALIVE (igual que tu bot bueno)
+# 🌐 KEEP ALIVE
 # =========================
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -27,8 +26,6 @@ Thread(target=run_web, daemon=True).start()
 # 🤖 BOT
 # =========================
 intents = discord.Intents.default()
-intents.message_content = True
-intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -38,85 +35,102 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # =========================
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f"✅ Bot conectado como {bot.user}")
 
 
 # =========================
 # 💡 SUGERENCIA
 # =========================
-@bot.command()
-async def suggest(ctx, *, idea: str):
+@bot.tree.command(name="suggest", description="Enviar una sugerencia")
+async def suggest(interaction: discord.Interaction, idea: str):
 
-    channel = ctx.guild.get_channel(config.SUGGEST_CHANNEL_ID)
+    channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
 
-    if not channel:
-        return await ctx.send("❌ Canal de sugerencias no encontrado.")
+    if channel is None:
+        return await interaction.response.send_message(
+            "❌ Canal de sugerencias no encontrado.",
+            ephemeral=True
+        )
 
     embed = discord.Embed(
         title="💡 Nueva sugerencia",
         description=idea,
-        color=0x00b0ff
+        color=0x00B0FF
     )
-    embed.set_footer(text=f"Propuesto por {ctx.author}")
+
+    embed.set_footer(text=f"Propuesto por {interaction.user}")
 
     msg = await channel.send(embed=embed)
 
     await msg.add_reaction("👍")
     await msg.add_reaction("👎")
 
-    await ctx.send("✅ Sugerencia enviada.")
+    await interaction.response.send_message(
+        "✅ Sugerencia enviada.",
+        ephemeral=True
+    )
 
 
 # =========================
 # ✅ ACEPTAR
 # =========================
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def accept(ctx, message_id: int):
+@bot.tree.command(name="accept", description="Aceptar una sugerencia")
+@discord.app_commands.default_permissions(manage_messages=True)
+async def accept(interaction: discord.Interaction, message_id: str):
 
     await move_suggestion(
-        ctx,
-        message_id,
+        interaction,
+        int(message_id),
         config.APPROVED_CHANNEL_ID,
         "📌 Sugerencia aprobada",
-        0x2ecc71
+        0x2ECC71
     )
 
 
 # =========================
 # ❌ RECHAZAR
 # =========================
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def deny(ctx, message_id: int):
+@bot.tree.command(name="deny", description="Rechazar una sugerencia")
+@discord.app_commands.default_permissions(manage_messages=True)
+async def deny(interaction: discord.Interaction, message_id: str):
 
     await move_suggestion(
-        ctx,
-        message_id,
+        interaction,
+        int(message_id),
         config.DENIED_CHANNEL_ID,
         "❌ Sugerencia rechazada",
-        0xe74c3c
+        0xE74C3C
     )
 
 
 # =========================
 # 🔧 FUNCIÓN INTERNA
 # =========================
-async def move_suggestion(ctx, message_id, channel_id, title, color):
+async def move_suggestion(interaction, message_id, channel_id, title, color):
 
-    suggest_channel = ctx.guild.get_channel(config.SUGGEST_CHANNEL_ID)
-    target_channel = ctx.guild.get_channel(channel_id)
+    suggest_channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
+    target_channel = interaction.guild.get_channel(channel_id)
 
-    if not suggest_channel or not target_channel:
-        return await ctx.send("❌ Canales no configurados.")
+    if suggest_channel is None or target_channel is None:
+        return await interaction.response.send_message(
+            "❌ Canales no configurados.",
+            ephemeral=True
+        )
 
     try:
         msg = await suggest_channel.fetch_message(message_id)
     except:
-        return await ctx.send("❌ Mensaje no encontrado.")
+        return await interaction.response.send_message(
+            "❌ Mensaje no encontrado.",
+            ephemeral=True
+        )
 
     if not msg.embeds:
-        return await ctx.send("❌ El mensaje no tiene embed.")
+        return await interaction.response.send_message(
+            "❌ El mensaje no tiene un embed.",
+            ephemeral=True
+        )
 
     embed = msg.embeds[0]
 
@@ -132,10 +146,13 @@ async def move_suggestion(ctx, message_id, channel_id, title, color):
     await target_channel.send(embed=new_embed)
     await msg.delete()
 
-    await ctx.send("✅ Sugerencia movida correctamente.")
+    await interaction.response.send_message(
+        "✅ Sugerencia movida correctamente.",
+        ephemeral=True
+    )
 
 
 # =========================
-# 🚀 START
+# START
 # =========================
 bot.run(os.getenv("TOKEN"))
