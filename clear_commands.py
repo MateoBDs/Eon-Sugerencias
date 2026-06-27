@@ -2,7 +2,7 @@ import discord
 import os
 
 TOKEN = os.getenv("TOKEN")
-GUILD_ID = TU_ID_DEL_SERVIDOR
+GUILD_ID = 1519139801998164072
 
 class Client(discord.Client):
     def __init__(self):
