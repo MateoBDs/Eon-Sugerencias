@@ -23,7 +23,7 @@ def run_web():
 Thread(target=run_web, daemon=True).start()
 
 # =========================
-# 🤖 BOT
+# 🤖 BOT SETUP
 # =========================
 intents = discord.Intents.default()
 
@@ -35,8 +35,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # =========================
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    print(f"✅ Bot conectado como {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Slash commands sincronizados: {len(synced)}")
+    except Exception as e:
+        print(f"❌ Error sync: {e}")
+
+    print(f"🤖 Conectado como {bot.user}")
 
 
 # =========================
@@ -58,7 +63,6 @@ async def suggest(interaction: discord.Interaction, idea: str):
         description=idea,
         color=0x00B0FF
     )
-
     embed.set_footer(text=f"Propuesto por {interaction.user}")
 
     msg = await channel.send(embed=embed)
@@ -75,7 +79,7 @@ async def suggest(interaction: discord.Interaction, idea: str):
 # =========================
 # ✅ ACEPTAR
 # =========================
-@bot.tree.command(name="accept", description="Aceptar una sugerencia")
+@bot.tree.command(name="accept", description="Aceptar sugerencia")
 @discord.app_commands.default_permissions(manage_messages=True)
 async def accept(interaction: discord.Interaction, message_id: str):
 
@@ -91,7 +95,7 @@ async def accept(interaction: discord.Interaction, message_id: str):
 # =========================
 # ❌ RECHAZAR
 # =========================
-@bot.tree.command(name="deny", description="Rechazar una sugerencia")
+@bot.tree.command(name="deny", description="Rechazar sugerencia")
 @discord.app_commands.default_permissions(manage_messages=True)
 async def deny(interaction: discord.Interaction, message_id: str):
 
@@ -105,14 +109,14 @@ async def deny(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# 🔧 FUNCIÓN INTERNA
+# 🔧 FUNCIÓN
 # =========================
 async def move_suggestion(interaction, message_id, channel_id, title, color):
 
     suggest_channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
     target_channel = interaction.guild.get_channel(channel_id)
 
-    if suggest_channel is None or target_channel is None:
+    if not suggest_channel or not target_channel:
         return await interaction.response.send_message(
             "❌ Canales no configurados.",
             ephemeral=True
@@ -128,7 +132,7 @@ async def move_suggestion(interaction, message_id, channel_id, title, color):
 
     if not msg.embeds:
         return await interaction.response.send_message(
-            "❌ El mensaje no tiene un embed.",
+            "❌ El mensaje no tiene embed.",
             ephemeral=True
         )
 
