@@ -1,9 +1,8 @@
 import discord
-import asyncio
 import os
 
 TOKEN = os.getenv("TOKEN")
-GUILD_ID = 123456789012345678  # tu servidor
+GUILD_ID = TU_ID_DEL_SERVIDOR
 
 class Client(discord.Client):
     def __init__(self):
@@ -14,11 +13,16 @@ class Client(discord.Client):
     async def setup_hook(self):
         guild = discord.Object(id=GUILD_ID)
 
-        # 🔥 BORRA comandos del servidor
-        self.tree.clear_commands(guild=guild)
-        await self.tree.sync(guild=guild)
+        try:
+            await self.tree.sync(guild=guild)
+            self.tree.clear_commands(guild=guild)
+            await self.tree.sync(guild=guild)
 
-        print("🧨 Comandos borrados en guild")
+            print("🧨 comandos borrados correctamente")
+
+        except Exception as e:
+            print("ERROR:", e)
+
         await self.close()
 
 client = Client()
