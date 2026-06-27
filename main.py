@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import config
 
 # =========================
-# 🌐 KEEP ALIVE
+# 🌐 KEEP ALIVE (Render)
 # =========================
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -23,7 +23,7 @@ def run_web():
 Thread(target=run_web, daemon=True).start()
 
 # =========================
-# 🤖 BOT SETUP
+# 🤖 BOT
 # =========================
 intents = discord.Intents.default()
 
@@ -31,15 +31,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 # =========================
-# READY
+# READY (SYNC SLASH COMMANDS)
 # =========================
 @bot.event
 async def on_ready():
+    print("🔥 ON READY EJECUTADO")
+
     try:
         synced = await bot.tree.sync()
         print(f"✅ Slash commands sincronizados: {len(synced)}")
     except Exception as e:
-        print(f"❌ Error sync: {e}")
+        print(f"❌ ERROR SYNC: {e}")
 
     print(f"🤖 Conectado como {bot.user}")
 
@@ -109,7 +111,7 @@ async def deny(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# 🔧 FUNCIÓN
+# 🔧 FUNCIÓN INTERNA
 # =========================
 async def move_suggestion(interaction, message_id, channel_id, title, color):
 
@@ -157,6 +159,6 @@ async def move_suggestion(interaction, message_id, channel_id, title, color):
 
 
 # =========================
-# START
+# START BOT
 # =========================
 bot.run(os.getenv("TOKEN"))
