@@ -1,10 +1,11 @@
 import os
 import discord
-from discord.ext import commands
+from discord import app_commands
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
+
 
 # =========================
 # 🌐 KEEP ALIVE (Render)
@@ -22,48 +23,43 @@ def run_web():
 
 Thread(target=run_web, daemon=True).start()
 
-# =========================
-# INTENTS
-# =========================
-intents = discord.Intents.default()
 
 # =========================
-# BOT (PRO SETUP)
+# BOT
 # =========================
-class MyBot(commands.Bot):
+class MyClient(discord.Client):
     def __init__(self):
-        super().__init__(command_prefix="!", intents=intents)
+        intents = discord.Intents.default()
+        super().__init__(intents=intents)
+
+        self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # 🔥 Sync de slash commands aquí (NO en on_ready)
-        synced = await self.tree.sync()
-        print(f"✅ Slash commands sincronizados: {len(synced)}")
+        await self.tree.sync()
+        print("✅ Slash commands sincronizados")
 
 
-bot = MyBot()
+client = MyClient()
 
 
 # =========================
 # READY
 # =========================
-@bot.event
+@client.event
 async def on_ready():
-    print(f"🔥 Bot conectado como {bot.user}")
+    print(f"🔥 Bot conectado como {client.user}")
 
 
 # =========================
 # 💡 SUGERENCIA
 # =========================
-@bot.tree.command(name="suggest", description="Enviar una sugerencia")
+@client.tree.command(name="suggest", description="Enviar una sugerencia")
 async def suggest(interaction: discord.Interaction, idea: str):
 
     channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
 
-    if channel is None:
-        return await interaction.response.send_message(
-            "❌ Canal de sugerencias no encontrado.",
-            ephemeral=True
-        )
+    if not channel:
+        return await interaction.response.send_message("❌ Canal no encontrado", ephemeral=True)
 
     embed = discord.Embed(
         title="💡 Nueva sugerencia",
@@ -77,71 +73,27 @@ async def suggest(interaction: discord.Interaction, idea: str):
     await msg.add_reaction("👍")
     await msg.add_reaction("👎")
 
-    await interaction.response.send_message(
-        "✅ Sugerencia enviada.",
-        ephemeral=True
-    )
+    await interaction.response.send_message("✅ Sugerencia enviada", ephemeral=True)
 
 
 # =========================
-# ACEPTAR
+# 🔧 FUNCIÓN BASE
 # =========================
-@bot.tree.command(name="accept", description="Aceptar sugerencia")
-@discord.app_commands.default_permissions(manage_messages=True)
-async def accept(interaction: discord.Interaction, message_id: str):
-
-    await move_suggestion(
-        interaction,
-        int(message_id),
-        config.APPROVED_CHANNEL_ID,
-        "📌 Sugerencia aprobada",
-        0x2ECC71
-    )
-
-
-# =========================
-# RECHAZAR
-# =========================
-@bot.tree.command(name="deny", description="Rechazar sugerencia")
-@discord.app_commands.default_permissions(manage_messages=True)
-async def deny(interaction: discord.Interaction, message_id: str):
-
-    await move_suggestion(
-        interaction,
-        int(message_id),
-        config.DENIED_CHANNEL_ID,
-        "❌ Sugerencia rechazada",
-        0xE74C3C
-    )
-
-
-# =========================
-# FUNCIÓN INTERNA
-# =========================
-async def move_suggestion(interaction, message_id, channel_id, title, color):
+async def move_suggestion(interaction, message_id: int, channel_id: int, title: str, color: int):
 
     suggest_channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
     target_channel = interaction.guild.get_channel(channel_id)
 
     if not suggest_channel or not target_channel:
-        return await interaction.response.send_message(
-            "❌ Canales no configurados.",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ Canales no configurados", ephemeral=True)
 
     try:
         msg = await suggest_channel.fetch_message(message_id)
     except:
-        return await interaction.response.send_message(
-            "❌ Mensaje no encontrado.",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ Mensaje no encontrado", ephemeral=True)
 
     if not msg.embeds:
-        return await interaction.response.send_message(
-            "❌ El mensaje no tiene embed.",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ El mensaje no tiene embed", ephemeral=True)
 
     embed = msg.embeds[0]
 
@@ -157,13 +109,40 @@ async def move_suggestion(interaction, message_id, channel_id, title, color):
     await target_channel.send(embed=new_embed)
     await msg.delete()
 
-    await interaction.response.send_message(
-        "✅ Sugerencia movida correctamente.",
-        ephemeral=True
+    await interaction.response.send_message("✅ Acción realizada", ephemeral=True)
+
+
+# =========================
+# ✅ ACCEPT
+# =========================
+@client.tree.command(name="accept", description="Aceptar sugerencia")
+async def accept(interaction: discord.Interaction, message_id: str):
+
+    await move_suggestion(
+        interaction,
+        int(message_id),
+        config.APPROVED_CHANNEL_ID,
+        "📌 Sugerencia aprobada",
+        0x2ECC71
     )
 
 
 # =========================
-# START BOT
+# ❌ DENY
 # =========================
-bot.run(os.getenv("TOKEN"))
+@client.tree.command(name="deny", description="Rechazar sugerencia")
+async def deny(interaction: discord.Interaction, message_id: str):
+
+    await move_suggestion(
+        interaction,
+        int(message_id),
+        config.DENIED_CHANNEL_ID,
+        "❌ Sugerencia rechazada",
+        0xE74C3C
+    )
+
+
+# =========================
+# START
+# =========================
+client.run(os.getenv("TOKEN"))
