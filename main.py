@@ -6,9 +6,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import config
 
-
 # =========================
-# 🌐 KEEP ALIVE (Render)
+# 🌐 KEEP ALIVE (RENDER)
 # =========================
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -31,12 +30,16 @@ class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
         super().__init__(intents=intents)
-
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        await self.tree.sync()
-        print("✅ Slash commands sincronizados")
+        # 🔥 GUILD SYNC (INSTANTÁNEO)
+        guild = discord.Object(id=config.GUILD_ID)
+
+        self.tree.copy_global_to(guild=guild)
+        await self.tree.sync(guild=guild)
+
+        print("✅ Slash commands sincronizados en GUILD")
 
 
 client = MyClient()
@@ -59,7 +62,10 @@ async def suggest(interaction: discord.Interaction, idea: str):
     channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
 
     if not channel:
-        return await interaction.response.send_message("❌ Canal no encontrado", ephemeral=True)
+        return await interaction.response.send_message(
+            "❌ Canal no encontrado",
+            ephemeral=True
+        )
 
     embed = discord.Embed(
         title="💡 Nueva sugerencia",
@@ -73,7 +79,10 @@ async def suggest(interaction: discord.Interaction, idea: str):
     await msg.add_reaction("👍")
     await msg.add_reaction("👎")
 
-    await interaction.response.send_message("✅ Sugerencia enviada", ephemeral=True)
+    await interaction.response.send_message(
+        "✅ Sugerencia enviada",
+        ephemeral=True
+    )
 
 
 # =========================
@@ -113,7 +122,7 @@ async def move_suggestion(interaction, message_id: int, channel_id: int, title: 
 
 
 # =========================
-# ✅ ACCEPT
+# ACCEPT
 # =========================
 @client.tree.command(name="accept", description="Aceptar sugerencia")
 async def accept(interaction: discord.Interaction, message_id: str):
@@ -128,7 +137,7 @@ async def accept(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# ❌ DENY
+# DENY
 # =========================
 @client.tree.command(name="deny", description="Rechazar sugerencia")
 async def deny(interaction: discord.Interaction, message_id: str):
