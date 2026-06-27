@@ -1,8 +1,8 @@
 import os
 import discord
 from discord import app_commands
-from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 
 import config
 
@@ -21,11 +21,12 @@ def run_web():
 
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
+
 Thread(target=run_web, daemon=True).start()
 
 
 # =========================
-# BOT
+# BOT CLIENT
 # =========================
 class MyClient(discord.Client):
     def __init__(self):
@@ -36,10 +37,11 @@ class MyClient(discord.Client):
     async def setup_hook(self):
         guild = discord.Object(id=config.GUILD_ID)
 
-        self.tree.copy_global_to(guild=guild)
+        # 🔥 IMPORTANTE:
+        # SOLO sync en guild → evita duplicados globales
         await self.tree.sync(guild=guild)
 
-        print("✅ Slash commands sincronizados en GUILD")
+        print("✅ Slash commands sincronizados en guild (sin duplicados)")
 
 
 client = MyClient()
@@ -54,9 +56,9 @@ async def on_ready():
 
 
 # =========================
-# 💡 SUGERENCIA
+# 💡 SUGGEST
 # =========================
-@client.tree.command(name="suggest", description="Enviar una sugerencia")
+@client.tree.command(name="suggest", description="Enviar sugerencia")
 async def suggest(interaction: discord.Interaction, idea: str):
 
     channel = interaction.guild.get_channel(config.SUGGEST_CHANNEL_ID)
@@ -80,14 +82,14 @@ async def suggest(interaction: discord.Interaction, idea: str):
 
 
 # =========================
-# 🔧 CHECK DE ROL STAFF
+# 🔧 CHECK ROL STAFF
 # =========================
-def is_staff(interaction: discord.Interaction) -> bool:
+def is_staff(interaction: discord.Interaction):
     return any(role.id == config.STAFF_ROLE_ID for role in interaction.user.roles)
 
 
 # =========================
-# 🔧 FUNCIÓN BASE
+# 🔧 MOVE SUGGESTION
 # =========================
 async def move_suggestion(interaction, message_id: int, channel_id: int, title: str, color: int):
 
@@ -119,20 +121,17 @@ async def move_suggestion(interaction, message_id: int, channel_id: int, title: 
     await target_channel.send(embed=new_embed)
     await msg.delete()
 
-    await interaction.response.send_message("✅ Acción realizada", ephemeral=True)
+    await interaction.response.send_message("✅ Hecho", ephemeral=True)
 
 
 # =========================
-# ✅ ACCEPT (SOLO STAFF ROL)
+# ✅ ACCEPT
 # =========================
 @client.tree.command(name="accept", description="Aceptar sugerencia")
 async def accept(interaction: discord.Interaction, message_id: str):
 
     if not is_staff(interaction):
-        return await interaction.response.send_message(
-            "❌ No tienes permisos (staff requerido)",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ Sin permisos", ephemeral=True)
 
     await move_suggestion(
         interaction,
@@ -144,16 +143,13 @@ async def accept(interaction: discord.Interaction, message_id: str):
 
 
 # =========================
-# ❌ DENY (SOLO STAFF ROL)
+# ❌ DENY
 # =========================
 @client.tree.command(name="deny", description="Rechazar sugerencia")
 async def deny(interaction: discord.Interaction, message_id: str):
 
     if not is_staff(interaction):
-        return await interaction.response.send_message(
-            "❌ No tienes permisos (staff requerido)",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("❌ Sin permisos", ephemeral=True)
 
     await move_suggestion(
         interaction,
